@@ -1,0 +1,780 @@
+<!-- =========================================================
+WIDGET TARIFS + CALENDRIERS — VERSION ALIMENTÉE PAR GITHUB
+
+SOURCE DES DONNÉES :
+https://raw.githubusercontent.com/Cyber-Gaelle-eje/widget-tarifs-calendriers/main/data/prestations.csv
+
+À modifier uniquement si le dépôt ou le fichier change :
+const JHD_CSV_URL = "...";
+========================================================= -->
+
+<style>
+  .jhd-rdv-module {
+    /* FONDS */
+    --jhd-bg-soft: #fffaf7;
+    --jhd-bg-soft-active: #fff7f1;
+    --jhd-bg-note: #f3e9e1;
+
+    /* BORDURES */
+    --jhd-border: #e9ded7;
+    --jhd-border-active: #d9c7bb;
+
+    /* TEXTES */
+    --jhd-text-main: #3f3732;
+    --jhd-text-soft: #5b514c;
+    --jhd-text-note: #5f4f47;
+
+    /* BOUTONS */
+    --jhd-button-bg: #accdb9;
+    --jhd-button-bg-selected: #5f4f47;
+    --jhd-button-text: #ffffff;
+
+    /* OMBRES */
+    --jhd-shadow-soft: 0 8px 22px rgba(0, 0, 0, 0.045);
+    --jhd-shadow-card: 0 8px 26px rgba(0, 0, 0, 0.05);
+
+    width: 100%;
+    font-family: inherit;
+    color: var(--jhd-text-main);
+  }
+
+  .jhd-rdv-module * {
+    box-sizing: border-box;
+  }
+
+  .jhd-status {
+    max-width: 1180px;
+    margin: 0 auto;
+    padding: 18px 20px;
+    border: 1px solid var(--jhd-border);
+    border-radius: 18px;
+    background: var(--jhd-bg-soft);
+    color: var(--jhd-text-soft);
+    text-align: center;
+  }
+
+  .jhd-status.jhd-status-error {
+    font-weight: 700;
+  }
+
+  .jhd-rdv-selector {
+    display: grid;
+    grid-template-columns: minmax(0, 1.15fr) minmax(330px, 0.85fr);
+    gap: 26px;
+    width: 100%;
+    max-width: 1180px;
+    margin: 0 auto;
+  }
+
+  .jhd-rdv-left,
+  .jhd-rdv-right {
+    min-width: 0;
+  }
+
+  .jhd-accordion {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .jhd-accordion-item {
+    border: 1px solid var(--jhd-border);
+    border-radius: 20px;
+    background: var(--jhd-bg-soft);
+    overflow: hidden;
+    box-shadow: var(--jhd-shadow-soft);
+  }
+
+  .jhd-accordion-item.jhd-is-open {
+    border-color: var(--jhd-border-active);
+    background: var(--jhd-bg-soft-active);
+  }
+
+  .jhd-accordion-header {
+    width: 100%;
+    padding: 18px 20px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 14px;
+    border: 0;
+    background: transparent;
+    cursor: pointer;
+    font: inherit;
+    font-weight: 700;
+    font-size: 18px;
+    line-height: 1.3;
+    text-align: left;
+    color: var(--jhd-text-main);
+  }
+
+  .jhd-accordion-icon {
+    flex: 0 0 auto;
+    font-size: 24px;
+    line-height: 1;
+    transition: transform 0.2s ease;
+    color: var(--jhd-button-bg);
+  }
+
+  .jhd-accordion-item.jhd-is-open .jhd-accordion-icon {
+    transform: rotate(45deg);
+  }
+
+  .jhd-accordion-content {
+    display: none;
+    padding: 0 20px 22px;
+    color: var(--jhd-text-soft);
+    font-size: 15.5px;
+    line-height: 1.6;
+  }
+
+  .jhd-accordion-item.jhd-is-open .jhd-accordion-content {
+    display: block;
+  }
+
+  .jhd-accordion-content p {
+    margin: 0 0 14px;
+  }
+
+  .jhd-accordion-content ul {
+    margin: 0 0 16px 18px;
+    padding: 0;
+  }
+
+  .jhd-accordion-content li {
+    margin-bottom: 7px;
+  }
+
+  .jhd-highlight {
+    font-weight: 600;
+    color: var(--jhd-text-main);
+  }
+
+  .jhd-note {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 999px;
+    background: var(--jhd-bg-note);
+    font-weight: 700;
+    color: var(--jhd-text-note);
+  }
+
+  .jhd-price {
+    font-weight: 800;
+    color: var(--jhd-text-main);
+    margin-top: 8px !important;
+  }
+
+  .jhd-action-button {
+    display: block;
+    width: fit-content;
+    margin: 18px 0 0 auto;
+    border: 0;
+    border-radius: 999px;
+    padding: 12px 20px;
+    background: var(--jhd-button-bg);
+    color: var(--jhd-button-text);
+    font: inherit;
+    font-weight: 700;
+    cursor: pointer;
+    transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    text-align: center;
+  }
+
+  .jhd-action-button:hover {
+    transform: translateY(-1px);
+    opacity: 0.94;
+  }
+
+  .jhd-action-button.jhd-is-selected {
+    background: var(--jhd-button-bg-selected);
+  }
+
+  .jhd-component-display {
+    position: relative;
+    min-height: 720px;
+    border: 1px solid var(--jhd-border);
+    border-radius: 24px;
+    background: #ffffff;
+    padding: 16px;
+    box-shadow: var(--jhd-shadow-card);
+    overflow: hidden;
+  }
+
+  .jhd-calendar-panel {
+    position: absolute;
+    inset: 16px;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+  }
+
+  .jhd-calendar-panel.jhd-is-active {
+    opacity: 1;
+    visibility: visible;
+    pointer-events: auto;
+    z-index: 2;
+  }
+
+  .jhd-placeholder {
+    min-height: 660px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    color: #6f625c;
+    padding: 20px;
+  }
+
+  .jhd-placeholder-title {
+    font-size: 23px;
+    font-weight: 800;
+    color: var(--jhd-text-main);
+    margin-bottom: 10px;
+  }
+
+  .jhd-cal-inline {
+    width: 100%;
+    height: 688px;
+    overflow: auto;
+    border-radius: 18px;
+    background: #fff;
+  }
+
+  .jhd-mobile-back {
+    display: none;
+  }
+
+  @media (max-width: 900px) {
+    .jhd-rdv-selector {
+      display: block;
+      max-width: 100%;
+    }
+
+    .jhd-rdv-left {
+      width: 100%;
+    }
+
+    .jhd-rdv-right {
+      position: fixed;
+      inset: 0;
+      z-index: 2147483647;
+      width: 100%;
+      height: 100dvh;
+      background: var(--jhd-bg-soft);
+      opacity: 0;
+      visibility: hidden;
+      pointer-events: none;
+      transition: opacity 0.2s ease;
+    }
+
+    .jhd-rdv-right.jhd-is-visible {
+      opacity: 1;
+      visibility: visible;
+      pointer-events: auto;
+    }
+
+    .jhd-component-display {
+      width: 100%;
+      height: 100dvh;
+      min-height: 100dvh;
+      border: none;
+      border-radius: 0;
+      padding: 0;
+      box-shadow: none;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .jhd-calendar-panel {
+      inset: 0;
+      padding: calc(78px + env(safe-area-inset-top, 0px)) 14px 14px;
+      background: #ffffff;
+      overflow: hidden;
+    }
+
+    .jhd-placeholder-panel {
+      display: none;
+    }
+
+    .jhd-mobile-back {
+      display: flex;
+      position: relative;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      margin: 0 0 12px;
+      padding: 12px 16px;
+      border: 0;
+      border-radius: 999px;
+      background: var(--jhd-bg-note);
+      color: var(--jhd-text-note);
+      font: inherit;
+      font-weight: 800;
+      font-size: 15px;
+      cursor: pointer;
+      box-shadow: 0 6px 18px rgba(0, 0, 0, 0.12);
+    }
+
+    .jhd-cal-inline {
+      height: calc(100dvh - 150px - env(safe-area-inset-top, 0px));
+      border-radius: 14px;
+      overflow: auto;
+    }
+  }
+
+  @media (max-width: 520px) {
+    .jhd-accordion-header {
+      font-size: 16px;
+      padding: 16px;
+    }
+
+    .jhd-accordion-content {
+      padding: 0 16px 18px;
+      font-size: 15px;
+    }
+
+    .jhd-action-button {
+      width: 100%;
+      margin-top: 16px;
+    }
+
+    .jhd-calendar-panel {
+      padding: calc(82px + env(safe-area-inset-top, 0px)) 10px 10px;
+    }
+
+    .jhd-mobile-back {
+      font-size: 15px;
+      padding: 12px 14px;
+      margin-bottom: 12px;
+    }
+
+    .jhd-cal-inline {
+      height: calc(100dvh - 154px - env(safe-area-inset-top, 0px));
+    }
+  }
+</style>
+
+<div class="jhd-rdv-module" id="jhd-rdv-module">
+  <div class="jhd-status" data-jhd-status>
+    Chargement des rendez-vous…
+  </div>
+
+  <div class="jhd-rdv-selector" data-jhd-selector hidden>
+    <div class="jhd-rdv-left">
+      <div class="jhd-accordion" data-jhd-accordion></div>
+    </div>
+
+    <div class="jhd-rdv-right" data-jhd-calendar-column>
+      <div class="jhd-component-display">
+        <div class="jhd-calendar-panel jhd-placeholder-panel jhd-is-active" data-jhd-placeholder-panel>
+          <div class="jhd-placeholder">
+            <p class="jhd-placeholder-title">📅 Choisissez votre rendez-vous</p>
+            <p>Ouvrez une catégorie à gauche, puis cliquez sur le bouton pour afficher le calendrier de réservation correspondant.</p>
+          </div>
+        </div>
+
+        <div data-jhd-calendar-panels></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function () {
+  "use strict";
+
+  /* =========================================================
+  RÉGLAGE PRINCIPAL — ADRESSE DU CSV GITHUB
+  ========================================================= */
+  const JHD_CSV_URL = "https://raw.githubusercontent.com/Cyber-Gaelle-eje/widget-tarifs-calendriers/main/data/prestations.csv";
+  const JHD_TIME_ZONE = "Europe/Paris";
+  const JHD_CAL_ORIGIN = "https://app.cal.eu";
+
+  const root = document.getElementById("jhd-rdv-module");
+  if (!root) return;
+
+  const statusBox = root.querySelector("[data-jhd-status]");
+  const selector = root.querySelector("[data-jhd-selector]");
+  const accordion = root.querySelector("[data-jhd-accordion]");
+  const calendarColumn = root.querySelector("[data-jhd-calendar-column]");
+  const panelsHost = root.querySelector("[data-jhd-calendar-panels]");
+  const placeholderPanel = root.querySelector("[data-jhd-placeholder-panel]");
+
+  let bodyOverflowBeforeCalendar = "";
+
+  function parseCSV(text) {
+    const rows = [];
+    let row = [];
+    let field = "";
+    let inQuotes = false;
+
+    const cleanText = text.replace(/^\uFEFF/, "");
+
+    for (let i = 0; i < cleanText.length; i += 1) {
+      const char = cleanText[i];
+      const next = cleanText[i + 1];
+
+      if (inQuotes) {
+        if (char === '"' && next === '"') {
+          field += '"';
+          i += 1;
+        } else if (char === '"') {
+          inQuotes = false;
+        } else {
+          field += char;
+        }
+      } else if (char === '"') {
+        inQuotes = true;
+      } else if (char === ",") {
+        row.push(field);
+        field = "";
+      } else if (char === "\n") {
+        row.push(field.replace(/\r$/, ""));
+        rows.push(row);
+        row = [];
+        field = "";
+      } else {
+        field += char;
+      }
+    }
+
+    if (field.length || row.length) {
+      row.push(field.replace(/\r$/, ""));
+      rows.push(row);
+    }
+
+    if (rows.length < 2) return [];
+
+    const headers = rows[0].map(function (header) {
+      return header.trim().toLowerCase();
+    });
+
+    return rows.slice(1)
+      .filter(function (cells) {
+        return cells.some(function (cell) { return cell.trim() !== ""; });
+      })
+      .map(function (cells) {
+        const item = {};
+        headers.forEach(function (header, index) {
+          item[header] = (cells[index] || "").trim();
+        });
+        return item;
+      });
+  }
+
+  function isActive(value) {
+    return ["oui", "yes", "true", "1", "actif", "active"].includes(
+      String(value || "").trim().toLowerCase()
+    );
+  }
+
+  function getParisDateISO() {
+    const parts = new Intl.DateTimeFormat("fr-FR", {
+      timeZone: JHD_TIME_ZONE,
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit"
+    }).formatToParts(new Date());
+
+    const values = {};
+    parts.forEach(function (part) {
+      if (part.type !== "literal") values[part.type] = part.value;
+    });
+
+    return values.year + "-" + values.month + "-" + values.day;
+  }
+
+  function selectCurrentRows(rows) {
+    const today = getParisDateISO();
+    const validRows = rows.filter(function (row) {
+      const start = row.date_debut || "0000-01-01";
+      const end = row.date_fin || "9999-12-31";
+      return row.id && isActive(row.actif) && start <= today && today <= end;
+    });
+
+    const byId = new Map();
+
+    validRows.forEach(function (row) {
+      const previous = byId.get(row.id);
+      if (!previous || (row.date_debut || "") > (previous.date_debut || "")) {
+        byId.set(row.id, row);
+      }
+    });
+
+    return Array.from(byId.values()).sort(function (a, b) {
+      return Number(a.ordre || 999) - Number(b.ordre || 999);
+    });
+  }
+
+  function safeId(value) {
+    return String(value || "prestation")
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, "-")
+      .replace(/^-+|-+$/g, "");
+  }
+
+  function addParagraph(parent, text, className) {
+    if (!text) return;
+    const p = document.createElement("p");
+    if (className) p.className = className;
+    p.textContent = text;
+    parent.appendChild(p);
+  }
+
+  function addList(parent, title, listText) {
+    if (title) addParagraph(parent, title, "");
+    if (!listText) return;
+
+    const items = listText.split("|").map(function (item) {
+      return item.trim();
+    }).filter(Boolean);
+
+    if (!items.length) return;
+
+    const ul = document.createElement("ul");
+    items.forEach(function (item) {
+      const li = document.createElement("li");
+      li.textContent = item;
+      ul.appendChild(li);
+    });
+    parent.appendChild(ul);
+  }
+
+  function closeMobileCalendar() {
+    calendarColumn.classList.remove("jhd-is-visible");
+    document.documentElement.style.overflow = bodyOverflowBeforeCalendar;
+  }
+
+  function showCalendar(index) {
+    root.querySelectorAll(".jhd-calendar-panel").forEach(function (panel) {
+      panel.classList.remove("jhd-is-active");
+    });
+
+    root.querySelectorAll(".jhd-action-button").forEach(function (button) {
+      button.classList.remove("jhd-is-selected");
+    });
+
+    const panel = root.querySelector('[data-jhd-panel="' + index + '"]');
+    const button = root.querySelector('[data-jhd-action="' + index + '"]');
+
+    if (panel) panel.classList.add("jhd-is-active");
+    if (button) button.classList.add("jhd-is-selected");
+
+    if (window.matchMedia("(max-width: 900px)").matches) {
+      bodyOverflowBeforeCalendar = document.documentElement.style.overflow;
+      document.documentElement.style.overflow = "hidden";
+      calendarColumn.classList.add("jhd-is-visible");
+    }
+
+    window.setTimeout(function () {
+      window.dispatchEvent(new Event("resize"));
+    }, 120);
+  }
+
+  function showPlaceholder() {
+    root.querySelectorAll(".jhd-calendar-panel").forEach(function (panel) {
+      panel.classList.remove("jhd-is-active");
+    });
+    root.querySelectorAll(".jhd-action-button").forEach(function (button) {
+      button.classList.remove("jhd-is-selected");
+    });
+    placeholderPanel.classList.add("jhd-is-active");
+    closeMobileCalendar();
+  }
+
+  function installCalBootstrap() {
+    (function (C, A, L) {
+      const push = function (api, args) { api.q.push(args); };
+      const d = C.document;
+
+      C.Cal = C.Cal || function () {
+        const cal = C.Cal;
+        const args = arguments;
+
+        if (!cal.loaded) {
+          cal.ns = {};
+          cal.q = cal.q || [];
+          const script = d.createElement("script");
+          script.src = A;
+          script.async = true;
+          d.head.appendChild(script);
+          cal.loaded = true;
+        }
+
+        if (args[0] === L) {
+          const api = function () { push(api, arguments); };
+          const namespace = args[1];
+          api.q = api.q || [];
+
+          if (typeof namespace === "string") {
+            cal.ns[namespace] = cal.ns[namespace] || api;
+            push(cal.ns[namespace], args);
+            push(cal, ["initNamespace", namespace]);
+          } else {
+            push(cal, args);
+          }
+          return;
+        }
+
+        push(cal, args);
+      };
+    })(window, "https://app.cal.eu/embed/embed.js", "init");
+
+    window.Cal.config = window.Cal.config || {};
+    window.Cal.config.forwardQueryParams = true;
+  }
+
+  function initializeCalendar(row, index) {
+    if (!row.cal_link) return;
+
+    const namespace = "jhd-" + safeId(row.id) + "-" + index;
+    const selectorId = "jhd-cal-inline-" + safeId(row.id) + "-" + index;
+
+    window.Cal("init", namespace, { origin: JHD_CAL_ORIGIN });
+
+    window.Cal.ns[namespace]("inline", {
+      elementOrSelector: "#" + selectorId,
+      config: {
+        layout: "month_view",
+        useSlotsViewOnSmallScreen: "true"
+      },
+      calLink: row.cal_link
+    });
+
+    window.Cal.ns[namespace]("ui", {
+      hideEventTypeDetails: false,
+      layout: "month_view"
+    });
+  }
+
+  function buildInterface(rows) {
+    accordion.textContent = "";
+    panelsHost.textContent = "";
+
+    rows.forEach(function (row, index) {
+      const accordionItem = document.createElement("section");
+      accordionItem.className = "jhd-accordion-item" + (index === 0 ? " jhd-is-open" : "");
+
+      const headerButton = document.createElement("button");
+      headerButton.type = "button";
+      headerButton.className = "jhd-accordion-header";
+      headerButton.setAttribute("aria-expanded", index === 0 ? "true" : "false");
+
+      const title = document.createElement("span");
+      title.textContent = row.titre || row.id;
+
+      const icon = document.createElement("span");
+      icon.className = "jhd-accordion-icon";
+      icon.setAttribute("aria-hidden", "true");
+      icon.textContent = "+";
+
+      headerButton.appendChild(title);
+      headerButton.appendChild(icon);
+
+      const content = document.createElement("div");
+      content.className = "jhd-accordion-content";
+
+      addParagraph(content, row.note, "jhd-note");
+      addParagraph(content, row.paragraphe_1, "");
+      addList(content, row.titre_liste_1, row.liste_1);
+      addParagraph(content, row.mise_en_avant, "jhd-highlight");
+      addParagraph(content, row.paragraphe_2, "");
+      addParagraph(content, row.paragraphe_3, "");
+      addList(content, row.titre_liste_2, row.liste_2);
+
+      if (row.tarif) {
+        addParagraph(content, "🏷️ Tarif : " + row.tarif, "jhd-price");
+      }
+
+      const actionButton = document.createElement("button");
+      actionButton.type = "button";
+      actionButton.className = "jhd-action-button";
+      actionButton.dataset.jhdAction = String(index);
+      actionButton.textContent = row.texte_bouton || "Choisir ce rendez-vous";
+      actionButton.addEventListener("click", function () {
+        showCalendar(index);
+      });
+      content.appendChild(actionButton);
+
+      headerButton.addEventListener("click", function () {
+        const alreadyOpen = accordionItem.classList.contains("jhd-is-open");
+
+        root.querySelectorAll(".jhd-accordion-item").forEach(function (item) {
+          item.classList.remove("jhd-is-open");
+          const button = item.querySelector(".jhd-accordion-header");
+          if (button) button.setAttribute("aria-expanded", "false");
+        });
+
+        if (!alreadyOpen) {
+          accordionItem.classList.add("jhd-is-open");
+          headerButton.setAttribute("aria-expanded", "true");
+        }
+      });
+
+      accordionItem.appendChild(headerButton);
+      accordionItem.appendChild(content);
+      accordion.appendChild(accordionItem);
+
+      const panel = document.createElement("div");
+      panel.className = "jhd-calendar-panel";
+      panel.dataset.jhdPanel = String(index);
+
+      const backButton = document.createElement("button");
+      backButton.type = "button";
+      backButton.className = "jhd-mobile-back";
+      backButton.textContent = "← Retour aux formules";
+      backButton.addEventListener("click", showPlaceholder);
+
+      const calContainer = document.createElement("div");
+      calContainer.className = "jhd-cal-inline";
+      calContainer.id = "jhd-cal-inline-" + safeId(row.id) + "-" + index;
+
+      panel.appendChild(backButton);
+      panel.appendChild(calContainer);
+      panelsHost.appendChild(panel);
+    });
+
+    installCalBootstrap();
+    rows.forEach(initializeCalendar);
+
+    statusBox.hidden = true;
+    selector.hidden = false;
+  }
+
+  function showError(message) {
+    selector.hidden = true;
+    statusBox.hidden = false;
+    statusBox.classList.add("jhd-status-error");
+    statusBox.textContent = message;
+  }
+
+  const separator = JHD_CSV_URL.includes("?") ? "&" : "?";
+  const urlWithoutCache = JHD_CSV_URL + separator + "v=" + Date.now();
+
+  fetch(urlWithoutCache, { cache: "no-store" })
+    .then(function (response) {
+      if (!response.ok) {
+        throw new Error("Réponse GitHub " + response.status);
+      }
+      return response.text();
+    })
+    .then(function (csvText) {
+      const allRows = parseCSV(csvText);
+      const currentRows = selectCurrentRows(allRows);
+
+      if (!currentRows.length) {
+        throw new Error("Aucune prestation active n’est valable à la date du jour.");
+      }
+
+      buildInterface(currentRows);
+    })
+    .catch(function (error) {
+      console.error("JHD — Chargement des prestations impossible :", error);
+      showError("Les rendez-vous ne peuvent pas être affichés pour le moment. Merci de réessayer ou de passer par la page de contact.");
+    });
+})();
+</script>
