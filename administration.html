@@ -1,0 +1,989 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex,nofollow">
+  <title>Administration des prestations – Gaëlle</title>
+  <style>
+    :root {
+      --bg: #f7f4f1;
+      --card: #ffffff;
+      --soft: #fffaf7;
+      --soft-active: #fff7f1;
+      --border: #e3d8d1;
+      --border-strong: #cdbbb0;
+      --text: #3f3732;
+      --muted: #6d625c;
+      --primary: #accdb9;
+      --primary-dark: #5f4f47;
+      --danger: #9f3f3f;
+      --danger-soft: #fff0f0;
+      --warning: #8b6517;
+      --warning-soft: #fff8df;
+      --success: #28633f;
+      --success-soft: #edf8f1;
+      --past: #6d6d6d;
+      --past-soft: #f1f1f1;
+      --shadow: 0 10px 28px rgba(44, 34, 28, .08);
+      --radius: 18px;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--text);
+      font-family: Arial, Helvetica, sans-serif;
+      line-height: 1.5;
+    }
+
+    button, input, select, textarea { font: inherit; }
+
+    .app {
+      width: min(1420px, calc(100% - 30px));
+      margin: 24px auto 60px;
+    }
+
+    .hero {
+      padding: 26px;
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    h1 { margin: 0 0 8px; font-size: clamp(25px, 3vw, 38px); }
+    h2, h3 { margin-top: 0; }
+    .intro { margin: 0; color: var(--muted); max-width: 920px; }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 20px;
+    }
+
+    .button {
+      appearance: none;
+      border: 1px solid transparent;
+      border-radius: 999px;
+      padding: 11px 17px;
+      cursor: pointer;
+      font-weight: 700;
+      background: var(--primary-dark);
+      color: white;
+      transition: transform .15s ease, opacity .15s ease;
+    }
+
+    .button:hover { transform: translateY(-1px); opacity: .94; }
+    .button.secondary { background: var(--primary); color: #26372d; }
+    .button.light { background: white; color: var(--text); border-color: var(--border); }
+    .button.danger { background: var(--danger); }
+    .button.small { padding: 8px 12px; font-size: 14px; }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 16px;
+      min-height: 28px;
+      color: var(--muted);
+    }
+
+    .dirty-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: var(--past);
+    }
+
+    .dirty-dot.active { background: var(--warning); box-shadow: 0 0 0 4px var(--warning-soft); }
+
+    .layout {
+      display: grid;
+      grid-template-columns: minmax(260px, 330px) minmax(0, 1fr);
+      gap: 20px;
+      margin-top: 20px;
+      align-items: start;
+    }
+
+    .side {
+      position: sticky;
+      top: 16px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      background: var(--card);
+      box-shadow: var(--shadow);
+    }
+
+    .panel p:last-child { margin-bottom: 0; }
+
+    .search {
+      width: 100%;
+      padding: 11px 13px;
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      background: white;
+      color: var(--text);
+    }
+
+    .stats {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      padding: 12px;
+      border-radius: 12px;
+      background: var(--soft);
+      border: 1px solid var(--border);
+    }
+
+    .stat strong { display: block; font-size: 22px; }
+    .stat span { color: var(--muted); font-size: 13px; }
+
+    .token-box {
+      padding: 14px;
+      border: 1px dashed var(--border-strong);
+      border-radius: 14px;
+      background: var(--soft);
+    }
+
+    .token-box label { font-weight: 700; display: block; margin-bottom: 7px; }
+    .token-box input { width: 100%; padding: 10px 12px; border: 1px solid var(--border); border-radius: 10px; }
+    .token-box small { display: block; margin-top: 8px; color: var(--muted); }
+
+    .validation-list { display: grid; gap: 8px; margin-top: 12px; }
+    .validation-item { padding: 10px 12px; border-radius: 11px; font-size: 14px; }
+    .validation-item.error { background: var(--danger-soft); color: var(--danger); }
+    .validation-item.warning { background: var(--warning-soft); color: var(--warning); }
+    .validation-item.success { background: var(--success-soft); color: var(--success); }
+
+    .cards { display: grid; gap: 16px; }
+
+    details.editor-card {
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      background: var(--card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+
+    details.editor-card[open] { border-color: var(--border-strong); }
+
+    summary.card-summary {
+      list-style: none;
+      cursor: pointer;
+      padding: 17px 19px;
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 14px;
+      align-items: center;
+      background: var(--soft);
+    }
+
+    summary.card-summary::-webkit-details-marker { display: none; }
+
+    .summary-title { font-weight: 800; font-size: 17px; }
+    .summary-sub { display: flex; flex-wrap: wrap; gap: 8px 14px; margin-top: 5px; color: var(--muted); font-size: 14px; }
+    .summary-arrow { font-size: 23px; color: var(--primary-dark); transition: transform .2s; }
+    details[open] .summary-arrow { transform: rotate(45deg); }
+
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      width: fit-content;
+      padding: 4px 9px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 800;
+    }
+
+    .badge.current { color: var(--success); background: var(--success-soft); }
+    .badge.future { color: var(--warning); background: var(--warning-soft); }
+    .badge.past { color: var(--past); background: var(--past-soft); }
+    .badge.inactive { color: var(--danger); background: var(--danger-soft); }
+
+    .card-body { padding: 20px; }
+
+    .section {
+      padding: 18px;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      background: white;
+      margin-bottom: 16px;
+    }
+
+    .section:last-child { margin-bottom: 0; }
+    .section h3 { font-size: 17px; margin-bottom: 12px; }
+    .section-note { margin: -6px 0 14px; color: var(--muted); font-size: 13px; }
+
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .grid.three { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .field.full { grid-column: 1 / -1; }
+
+    .field label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 6px;
+      font-size: 14px;
+    }
+
+    .field input,
+    .field select,
+    .field textarea {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 11px;
+      padding: 10px 12px;
+      background: #fff;
+      color: var(--text);
+    }
+
+    .field textarea { min-height: 92px; resize: vertical; }
+    .field textarea.long { min-height: 130px; }
+    .field small { display: block; margin-top: 5px; color: var(--muted); font-size: 12px; }
+
+    .preview {
+      padding: 18px;
+      border-radius: 16px;
+      background: var(--soft-active);
+      border: 1px solid var(--border);
+    }
+
+    .preview h3 { font-size: 18px; margin: 0 0 12px; }
+    .preview p { margin: 0 0 11px; }
+    .preview ul { margin: 0 0 12px 19px; padding: 0; }
+    .preview .note { display: inline-block; border-radius: 999px; padding: 7px 11px; background: #f3e9e1; font-weight: 700; }
+    .preview .highlight { font-weight: 700; }
+    .preview .price { font-weight: 800; font-size: 17px; }
+    .preview .fake-button { display: inline-block; border-radius: 999px; padding: 10px 16px; background: var(--primary); font-weight: 800; }
+
+    .card-actions { display: flex; flex-wrap: wrap; gap: 9px; margin-top: 16px; }
+
+    .message {
+      position: fixed;
+      right: 18px;
+      bottom: 18px;
+      width: min(440px, calc(100% - 36px));
+      z-index: 10;
+      padding: 15px 17px;
+      border-radius: 14px;
+      box-shadow: 0 14px 35px rgba(0,0,0,.18);
+      background: var(--primary-dark);
+      color: white;
+      display: none;
+    }
+
+    .message.show { display: block; }
+    .message.error { background: var(--danger); }
+    .message.success { background: var(--success); }
+
+    .loading { text-align: center; padding: 50px 20px; color: var(--muted); }
+    .hidden { display: none !important; }
+
+    @media (max-width: 980px) {
+      .layout { grid-template-columns: 1fr; }
+      .side { position: static; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .side .panel:last-child { grid-column: 1 / -1; }
+    }
+
+    @media (max-width: 720px) {
+      .app { width: min(100% - 18px, 1420px); margin-top: 10px; }
+      .hero { padding: 19px; border-radius: 18px; }
+      .layout, .side { grid-template-columns: 1fr; }
+      .side .panel:last-child { grid-column: auto; }
+      .grid, .grid.three { grid-template-columns: 1fr; }
+      .field.full { grid-column: auto; }
+      summary.card-summary { padding: 14px; }
+      .card-body { padding: 13px; }
+      .section { padding: 14px; }
+      .toolbar .button { flex: 1 1 190px; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <h1>Administration des tarifs et calendriers</h1>
+      <p class="intro">
+        Cette page transforme le fichier CSV en formulaires lisibles. Chaque fiche correspond à une prestation pour une période donnée. Les listes s’éditent ici avec une puce par ligne.
+      </p>
+
+      <div class="toolbar">
+        <button class="button light" id="reloadButton" type="button">↻ Recharger depuis GitHub</button>
+        <button class="button secondary" id="addButton" type="button">＋ Ajouter une prestation</button>
+        <button class="button light" id="validateButton" type="button">✓ Vérifier les données</button>
+        <button class="button light" id="downloadButton" type="button">↓ Télécharger le CSV</button>
+        <button class="button" id="saveButton" type="button">Enregistrer directement sur GitHub</button>
+      </div>
+
+      <div class="status-line">
+        <span class="dirty-dot" id="dirtyDot"></span>
+        <span id="dirtyText">Chargement des données…</span>
+      </div>
+    </section>
+
+    <div class="layout">
+      <aside class="side">
+        <section class="panel">
+          <h2>Vue d’ensemble</h2>
+          <input class="search" id="searchInput" type="search" placeholder="Rechercher une prestation…">
+          <div class="stats">
+            <div class="stat"><strong id="statRows">0</strong><span>lignes</span></div>
+            <div class="stat"><strong id="statCurrent">0</strong><span>actuelles</span></div>
+            <div class="stat"><strong id="statFuture">0</strong><span>futures</span></div>
+            <div class="stat"><strong id="statInactive">0</strong><span>inactives</span></div>
+          </div>
+        </section>
+
+        <section class="panel">
+          <h2>Enregistrement GitHub</h2>
+          <p>
+            Pour enregistrer directement, saisis un jeton GitHub limité à ce dépôt, avec l’autorisation <strong>Contents: Read and write</strong>.
+          </p>
+          <div class="token-box">
+            <label for="tokenInput">Jeton GitHub</label>
+            <input id="tokenInput" type="password" autocomplete="off" placeholder="github_pat_…">
+            <small>Le jeton n’est ni enregistré dans le fichier ni conservé après fermeture de la page.</small>
+          </div>
+          <p style="font-size:13px;color:var(--muted)">
+            Sans jeton, utilise « Télécharger le CSV », puis remplace le fichier <code>data/prestations.csv</code> sur GitHub.
+          </p>
+        </section>
+
+        <section class="panel">
+          <h2>Contrôle</h2>
+          <div id="validationList" class="validation-list">
+            <div class="validation-item warning">Les données n’ont pas encore été vérifiées.</div>
+          </div>
+        </section>
+      </aside>
+
+      <section>
+        <div id="loading" class="panel loading">Chargement du fichier depuis GitHub…</div>
+        <div id="cards" class="cards"></div>
+      </section>
+    </div>
+  </main>
+
+  <div id="message" class="message" role="status" aria-live="polite"></div>
+
+  <script>
+    (() => {
+      "use strict";
+
+      const CONFIG = {
+        owner: "Cyber-Gaelle-eje",
+        repo: "widget-tarifs-calendriers",
+        branch: "main",
+        path: "data/prestations.csv"
+      };
+
+      const RAW_URL = `https://raw.githubusercontent.com/${CONFIG.owner}/${CONFIG.repo}/${CONFIG.branch}/${CONFIG.path}`;
+      const API_URL = `https://api.github.com/repos/${CONFIG.owner}/${CONFIG.repo}/contents/${CONFIG.path}`;
+
+      const COLUMNS = [
+        "id", "ordre", "actif", "date_debut", "date_fin", "titre", "note",
+        "paragraphe_1", "titre_liste_1", "liste_1", "mise_en_avant",
+        "paragraphe_2", "paragraphe_3", "titre_liste_2", "liste_2",
+        "tarif", "texte_bouton", "cal_link"
+      ];
+
+      const LIST_FIELDS = new Set(["liste_1", "liste_2"]);
+      let rows = [];
+      let dirty = false;
+      let messageTimer = null;
+
+      const els = {
+        cards: document.getElementById("cards"),
+        loading: document.getElementById("loading"),
+        dirtyDot: document.getElementById("dirtyDot"),
+        dirtyText: document.getElementById("dirtyText"),
+        searchInput: document.getElementById("searchInput"),
+        tokenInput: document.getElementById("tokenInput"),
+        validationList: document.getElementById("validationList"),
+        statRows: document.getElementById("statRows"),
+        statCurrent: document.getElementById("statCurrent"),
+        statFuture: document.getElementById("statFuture"),
+        statInactive: document.getElementById("statInactive"),
+        message: document.getElementById("message")
+      };
+
+      function uid() {
+        return `r-${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+      }
+
+      function escapeHtml(value) {
+        return String(value ?? "")
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      function parseCsv(text) {
+        const clean = String(text).replace(/^\uFEFF/, "");
+        const matrix = [];
+        let row = [];
+        let field = "";
+        let inQuotes = false;
+
+        for (let i = 0; i < clean.length; i++) {
+          const char = clean[i];
+          const next = clean[i + 1];
+
+          if (inQuotes) {
+            if (char === '"' && next === '"') {
+              field += '"';
+              i++;
+            } else if (char === '"') {
+              inQuotes = false;
+            } else {
+              field += char;
+            }
+          } else if (char === '"') {
+            inQuotes = true;
+          } else if (char === ",") {
+            row.push(field);
+            field = "";
+          } else if (char === "\n") {
+            row.push(field.replace(/\r$/, ""));
+            matrix.push(row);
+            row = [];
+            field = "";
+          } else {
+            field += char;
+          }
+        }
+
+        if (field.length || row.length) {
+          row.push(field.replace(/\r$/, ""));
+          matrix.push(row);
+        }
+
+        if (!matrix.length) return [];
+        const headers = matrix.shift().map(h => h.trim());
+
+        return matrix
+          .filter(line => line.some(cell => String(cell).trim() !== ""))
+          .map(line => {
+            const item = { _uid: uid() };
+            headers.forEach((header, index) => item[header] = line[index] ?? "");
+            COLUMNS.forEach(column => {
+              if (!(column in item)) item[column] = "";
+            });
+            return item;
+          });
+      }
+
+      function csvEscape(value) {
+        return `"${String(value ?? "").replaceAll('"', '""')}"`;
+      }
+
+      function buildCsv() {
+        const header = COLUMNS.map(csvEscape).join(",");
+        const body = rows.map(row => COLUMNS.map(column => csvEscape(row[column])).join(","));
+        return `\uFEFF${[header, ...body].join("\r\n")}\r\n`;
+      }
+
+      function listToEditor(value) {
+        return String(value ?? "").split("|").map(item => item.trim()).filter(Boolean).join("\n");
+      }
+
+      function editorToList(value) {
+        return String(value ?? "").split(/\r?\n/).map(item => item.trim()).filter(Boolean).join("|");
+      }
+
+      function parisDateString() {
+        const parts = new Intl.DateTimeFormat("fr-CA", {
+          timeZone: "Europe/Paris",
+          year: "numeric",
+          month: "2-digit",
+          day: "2-digit"
+        }).formatToParts(new Date());
+        const values = Object.fromEntries(parts.map(part => [part.type, part.value]));
+        return `${values.year}-${values.month}-${values.day}`;
+      }
+
+      function classify(row) {
+        if (String(row.actif).toLowerCase() !== "oui") return "inactive";
+        const today = parisDateString();
+        if (row.date_debut && today < row.date_debut) return "future";
+        if (row.date_fin && today > row.date_fin) return "past";
+        return "current";
+      }
+
+      function statusLabel(status) {
+        return {
+          current: "En cours",
+          future: "À venir",
+          past: "Terminée",
+          inactive: "Inactive"
+        }[status] || status;
+      }
+
+      function fieldHtml(row, field, label, options = {}) {
+        const full = options.full ? " full" : "";
+        const hint = options.hint ? `<small>${escapeHtml(options.hint)}</small>` : "";
+        const value = LIST_FIELDS.has(field) ? listToEditor(row[field]) : row[field] ?? "";
+        let control = "";
+
+        if (options.type === "textarea") {
+          control = `<textarea class="jhd-field ${options.long ? "long" : ""}" data-field="${field}">${escapeHtml(value)}</textarea>`;
+        } else if (options.type === "select") {
+          control = `<select class="jhd-field" data-field="${field}">
+            ${options.values.map(item => `<option value="${escapeHtml(item)}" ${String(value) === item ? "selected" : ""}>${escapeHtml(item)}</option>`).join("")}
+          </select>`;
+        } else {
+          control = `<input class="jhd-field" data-field="${field}" type="${options.type || "text"}" value="${escapeHtml(value)}" ${options.min ? `min="${options.min}"` : ""}>`;
+        }
+
+        return `<div class="field${full}"><label>${escapeHtml(label)}</label>${control}${hint}</div>`;
+      }
+
+      function previewHtml(row) {
+        const list1 = String(row.liste_1 || "").split("|").filter(Boolean);
+        const list2 = String(row.liste_2 || "").split("|").filter(Boolean);
+        return `
+          <h3>${escapeHtml(row.titre || "Titre de la prestation")}</h3>
+          ${row.note ? `<p class="note">${escapeHtml(row.note)}</p>` : ""}
+          ${row.paragraphe_1 ? `<p>${escapeHtml(row.paragraphe_1)}</p>` : ""}
+          ${row.titre_liste_1 ? `<p>${escapeHtml(row.titre_liste_1)}</p>` : ""}
+          ${list1.length ? `<ul>${list1.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+          ${row.mise_en_avant ? `<p class="highlight">${escapeHtml(row.mise_en_avant)}</p>` : ""}
+          ${row.paragraphe_2 ? `<p>${escapeHtml(row.paragraphe_2)}</p>` : ""}
+          ${row.paragraphe_3 ? `<p>${escapeHtml(row.paragraphe_3)}</p>` : ""}
+          ${row.titre_liste_2 ? `<p>${escapeHtml(row.titre_liste_2)}</p>` : ""}
+          ${list2.length ? `<ul>${list2.map(item => `<li>${escapeHtml(item)}</li>`).join("")}</ul>` : ""}
+          ${row.tarif ? `<p class="price">🏷️ Tarif : ${escapeHtml(row.tarif)}</p>` : ""}
+          ${row.texte_bouton ? `<span class="fake-button">${escapeHtml(row.texte_bouton)}</span>` : ""}
+        `;
+      }
+
+      function cardHtml(row, index) {
+        const status = classify(row);
+        const title = row.titre || `Prestation ${index + 1}`;
+        return `
+          <details class="editor-card" data-uid="${row._uid}" ${status === "current" ? "open" : ""}>
+            <summary class="card-summary">
+              <div>
+                <div class="summary-title">${escapeHtml(title)}</div>
+                <div class="summary-sub">
+                  <span class="badge ${status}" data-role="badge">${statusLabel(status)}</span>
+                  <span data-role="price">${escapeHtml(row.tarif || "Tarif non renseigné")}</span>
+                  <span data-role="period">${escapeHtml(row.date_debut || "?")} → ${escapeHtml(row.date_fin || "?")}</span>
+                  <span data-role="identifier">ID : ${escapeHtml(row.id || "non défini")}</span>
+                </div>
+              </div>
+              <span class="summary-arrow">+</span>
+            </summary>
+
+            <div class="card-body">
+              <section class="section">
+                <h3>1. Identification et période de validité</h3>
+                <p class="section-note">Pour programmer un nouveau tarif, duplique cette fiche et modifie uniquement les dates, le tarif et éventuellement le lien Cal.</p>
+                <div class="grid three">
+                  ${fieldHtml(row, "id", "Identifiant permanent", { hint: "Même identifiant pour les différentes périodes d’une même prestation." })}
+                  ${fieldHtml(row, "ordre", "Ordre d’affichage", { type: "number", min: "1" })}
+                  ${fieldHtml(row, "actif", "Afficher cette ligne", { type: "select", values: ["oui", "non"] })}
+                  ${fieldHtml(row, "date_debut", "Date de début", { type: "date" })}
+                  ${fieldHtml(row, "date_fin", "Date de fin", { type: "date" })}
+                </div>
+              </section>
+
+              <section class="section">
+                <h3>2. Titre et premiers contenus</h3>
+                <div class="grid">
+                  ${fieldHtml(row, "titre", "Titre du tiroir", { full: true })}
+                  ${fieldHtml(row, "note", "Encadré court", { full: true, hint: "Laisse vide si aucun encadré n’est nécessaire." })}
+                  ${fieldHtml(row, "paragraphe_1", "Premier paragraphe", { type: "textarea", full: true })}
+                  ${fieldHtml(row, "titre_liste_1", "Phrase avant la première liste", { full: true })}
+                  ${fieldHtml(row, "liste_1", "Première liste à puces", { type: "textarea", long: true, full: true, hint: "Écris une puce par ligne. Le symbole | est ajouté automatiquement dans le CSV." })}
+                  ${fieldHtml(row, "mise_en_avant", "Phrase mise en avant", { type: "textarea", full: true })}
+                </div>
+              </section>
+
+              <section class="section">
+                <h3>3. Contenus complémentaires</h3>
+                <div class="grid">
+                  ${fieldHtml(row, "paragraphe_2", "Deuxième paragraphe", { type: "textarea", full: true })}
+                  ${fieldHtml(row, "paragraphe_3", "Troisième paragraphe", { type: "textarea", full: true })}
+                  ${fieldHtml(row, "titre_liste_2", "Phrase avant la deuxième liste", { full: true })}
+                  ${fieldHtml(row, "liste_2", "Deuxième liste à puces", { type: "textarea", long: true, full: true, hint: "Écris une puce par ligne." })}
+                </div>
+              </section>
+
+              <section class="section">
+                <h3>4. Tarif et réservation</h3>
+                <div class="grid">
+                  ${fieldHtml(row, "tarif", "Tarif affiché", { hint: "Exemple : 70 €" })}
+                  ${fieldHtml(row, "texte_bouton", "Texte du bouton")}
+                  ${fieldHtml(row, "cal_link", "Lien technique Cal.com / Cal.eu", { full: true, hint: "Exemple : gaelle-herrero-jqzlkf/faire-le-point-1-rdv-70-light" })}
+                </div>
+              </section>
+
+              <section class="section">
+                <h3>Aperçu du contenu</h3>
+                <div class="preview" data-role="preview">${previewHtml(row)}</div>
+              </section>
+
+              <div class="card-actions">
+                <button class="button secondary small" type="button" data-action="duplicate">Dupliquer pour une nouvelle période</button>
+                <button class="button light small" type="button" data-action="copy">Copier toute la fiche</button>
+                <button class="button danger small" type="button" data-action="delete">Supprimer cette ligne</button>
+              </div>
+            </div>
+          </details>
+        `;
+      }
+
+      function sortRows() {
+        rows.sort((a, b) => {
+          const orderA = Number(a.ordre) || 9999;
+          const orderB = Number(b.ordre) || 9999;
+          return orderA - orderB || String(a.id).localeCompare(String(b.id), "fr") || String(a.date_debut).localeCompare(String(b.date_debut));
+        });
+      }
+
+      function render() {
+        sortRows();
+        els.cards.innerHTML = rows.map(cardHtml).join("");
+        els.loading.classList.add("hidden");
+        updateStats();
+        applySearch();
+        validate(false);
+      }
+
+      function updateStats() {
+        const statuses = rows.map(classify);
+        els.statRows.textContent = rows.length;
+        els.statCurrent.textContent = statuses.filter(s => s === "current").length;
+        els.statFuture.textContent = statuses.filter(s => s === "future").length;
+        els.statInactive.textContent = statuses.filter(s => s === "inactive").length;
+      }
+
+      function setDirty(value) {
+        dirty = value;
+        els.dirtyDot.classList.toggle("active", dirty);
+        els.dirtyText.textContent = dirty
+          ? "Modifications non enregistrées"
+          : `Données chargées depuis GitHub – ${rows.length} ligne(s)`;
+      }
+
+      function showMessage(text, type = "") {
+        clearTimeout(messageTimer);
+        els.message.textContent = text;
+        els.message.className = `message show ${type}`.trim();
+        messageTimer = setTimeout(() => els.message.classList.remove("show"), 5500);
+      }
+
+      function updateCard(card, row) {
+        const status = classify(row);
+        const badge = card.querySelector('[data-role="badge"]');
+        badge.className = `badge ${status}`;
+        badge.textContent = statusLabel(status);
+        card.querySelector(".summary-title").textContent = row.titre || "Titre non renseigné";
+        card.querySelector('[data-role="price"]').textContent = row.tarif || "Tarif non renseigné";
+        card.querySelector('[data-role="period"]').textContent = `${row.date_debut || "?"} → ${row.date_fin || "?"}`;
+        card.querySelector('[data-role="identifier"]').textContent = `ID : ${row.id || "non défini"}`;
+        card.querySelector('[data-role="preview"]').innerHTML = previewHtml(row);
+      }
+
+      function findRow(uidValue) {
+        return rows.find(row => row._uid === uidValue);
+      }
+
+      function validate(showToast = true) {
+        const errors = [];
+        const warnings = [];
+        const required = ["id", "ordre", "actif", "date_debut", "date_fin", "titre", "tarif", "texte_bouton", "cal_link"];
+
+        rows.forEach((row, index) => {
+          const name = row.titre || `Ligne ${index + 1}`;
+          required.forEach(field => {
+            if (!String(row[field] ?? "").trim()) errors.push(`${name} : le champ « ${field} » est vide.`);
+          });
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date_debut || "")) errors.push(`${name} : date de début invalide.`);
+          if (!/^\d{4}-\d{2}-\d{2}$/.test(row.date_fin || "")) errors.push(`${name} : date de fin invalide.`);
+          if (row.date_debut && row.date_fin && row.date_debut > row.date_fin) errors.push(`${name} : la date de début est postérieure à la date de fin.`);
+          if (!Number.isInteger(Number(row.ordre)) || Number(row.ordre) < 1) errors.push(`${name} : l’ordre doit être un entier supérieur ou égal à 1.`);
+          if (!["oui", "non"].includes(String(row.actif).toLowerCase())) errors.push(`${name} : « actif » doit valoir oui ou non.`);
+        });
+
+        const activeRows = rows.filter(row => String(row.actif).toLowerCase() === "oui");
+        for (let i = 0; i < activeRows.length; i++) {
+          for (let j = i + 1; j < activeRows.length; j++) {
+            const a = activeRows[i];
+            const b = activeRows[j];
+            if (a.id && a.id === b.id && a.date_debut <= b.date_fin && b.date_debut <= a.date_fin) {
+              warnings.push(`${a.id} : les périodes ${a.date_debut}–${a.date_fin} et ${b.date_debut}–${b.date_fin} se chevauchent.`);
+            }
+          }
+        }
+
+        const currentById = new Map();
+        activeRows.filter(row => classify(row) === "current").forEach(row => {
+          currentById.set(row.id, (currentById.get(row.id) || 0) + 1);
+        });
+        currentById.forEach((count, id) => {
+          if (count > 1) warnings.push(`${id} : ${count} lignes sont valides aujourd’hui. Le widget choisira celle dont la date de début est la plus récente.`);
+        });
+
+        if (!rows.length) errors.push("Le fichier ne contient aucune prestation.");
+
+        const items = [];
+        errors.slice(0, 12).forEach(text => items.push(`<div class="validation-item error">${escapeHtml(text)}</div>`));
+        warnings.slice(0, 12).forEach(text => items.push(`<div class="validation-item warning">${escapeHtml(text)}</div>`));
+        if (!errors.length && !warnings.length) items.push('<div class="validation-item success">Aucune erreur ni incohérence détectée.</div>');
+        if (errors.length > 12 || warnings.length > 12) items.push('<div class="validation-item warning">D’autres remarques existent. Corrige les premières, puis relance la vérification.</div>');
+        els.validationList.innerHTML = items.join("");
+
+        if (showToast) {
+          if (errors.length) showMessage(`${errors.length} erreur(s) à corriger avant l’enregistrement.`, "error");
+          else if (warnings.length) showMessage(`Données valides, avec ${warnings.length} avertissement(s).`);
+          else showMessage("Toutes les données sont cohérentes.", "success");
+        }
+
+        return { errors, warnings };
+      }
+
+      function addDays(dateString, days) {
+        const date = new Date(`${dateString}T12:00:00Z`);
+        if (Number.isNaN(date.getTime())) return "";
+        date.setUTCDate(date.getUTCDate() + days);
+        return date.toISOString().slice(0, 10);
+      }
+
+      function duplicateRow(source, newPeriod = false) {
+        const copy = { ...source, _uid: uid() };
+        if (newPeriod) {
+          if (source.date_fin && source.date_fin < "2099-12-31") {
+            copy.date_debut = addDays(source.date_fin, 1);
+            copy.date_fin = "2099-12-31";
+          } else {
+            copy.date_debut = "";
+            copy.date_fin = "2099-12-31";
+          }
+        } else {
+          copy.id = `${source.id || "nouvelle-prestation"}-copie`;
+          copy.ordre = String(Math.max(0, ...rows.map(row => Number(row.ordre) || 0)) + 1);
+        }
+        const index = rows.findIndex(row => row._uid === source._uid);
+        rows.splice(index + 1, 0, copy);
+        setDirty(true);
+        render();
+        requestAnimationFrame(() => document.querySelector(`[data-uid="${copy._uid}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      }
+
+      function newRow() {
+        const nextOrder = Math.max(0, ...rows.map(row => Number(row.ordre) || 0)) + 1;
+        return {
+          _uid: uid(),
+          id: "nouvelle-prestation",
+          ordre: String(nextOrder),
+          actif: "oui",
+          date_debut: parisDateString(),
+          date_fin: "2099-12-31",
+          titre: "Nouvelle prestation",
+          note: "",
+          paragraphe_1: "",
+          titre_liste_1: "",
+          liste_1: "",
+          mise_en_avant: "",
+          paragraphe_2: "",
+          paragraphe_3: "",
+          titre_liste_2: "",
+          liste_2: "",
+          tarif: "",
+          texte_bouton: "Choisir cette prestation",
+          cal_link: ""
+        };
+      }
+
+      async function loadData(force = false) {
+        if (dirty && force && !confirm("Les modifications non enregistrées seront perdues. Continuer ?")) return;
+        els.loading.classList.remove("hidden");
+        els.loading.textContent = "Chargement du fichier depuis GitHub…";
+        els.cards.innerHTML = "";
+        try {
+          const response = await fetch(`${RAW_URL}?v=${Date.now()}`, { cache: "no-store" });
+          if (!response.ok) throw new Error(`GitHub a répondu ${response.status}`);
+          rows = parseCsv(await response.text());
+          setDirty(false);
+          render();
+          showMessage("Données chargées depuis GitHub.", "success");
+        } catch (error) {
+          els.loading.textContent = `Impossible de charger le CSV : ${error.message}`;
+          showMessage("Impossible de charger le fichier GitHub.", "error");
+        }
+      }
+
+      function downloadCsv() {
+        const validation = validate(false);
+        if (validation.errors.length && !confirm("Le fichier contient des erreurs. Le télécharger quand même ?")) return;
+        const blob = new Blob([buildCsv()], { type: "text/csv;charset=utf-8" });
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement("a");
+        link.href = url;
+        link.download = "prestations.csv";
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        showMessage("Le fichier prestations.csv a été téléchargé.", "success");
+      }
+
+      function utf8ToBase64(value) {
+        const bytes = new TextEncoder().encode(value);
+        let binary = "";
+        const chunkSize = 0x8000;
+        for (let i = 0; i < bytes.length; i += chunkSize) {
+          binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
+        }
+        return btoa(binary);
+      }
+
+      async function saveToGithub() {
+        const { errors, warnings } = validate(false);
+        if (errors.length) {
+          showMessage("Corrige les erreurs avant d’enregistrer sur GitHub.", "error");
+          return;
+        }
+        if (warnings.length && !confirm(`Il reste ${warnings.length} avertissement(s). Enregistrer quand même ?`)) return;
+
+        const token = els.tokenInput.value.trim();
+        if (!token) {
+          showMessage("Saisis d’abord le jeton GitHub dans la colonne de gauche.", "error");
+          els.tokenInput.focus();
+          return;
+        }
+
+        const headers = {
+          "Accept": "application/vnd.github+json",
+          "Authorization": `Bearer ${token}`,
+          "X-GitHub-Api-Version": "2026-03-10"
+        };
+
+        try {
+          document.getElementById("saveButton").disabled = true;
+          showMessage("Lecture de la version actuelle sur GitHub…");
+
+          const currentResponse = await fetch(`${API_URL}?ref=${encodeURIComponent(CONFIG.branch)}`, { headers });
+          if (!currentResponse.ok) {
+            const body = await currentResponse.json().catch(() => ({}));
+            throw new Error(body.message || `Erreur ${currentResponse.status}`);
+          }
+          const current = await currentResponse.json();
+
+          const updateResponse = await fetch(API_URL, {
+            method: "PUT",
+            headers: { ...headers, "Content-Type": "application/json" },
+            body: JSON.stringify({
+              message: `Mise à jour des prestations depuis l’interface (${parisDateString()})`,
+              content: utf8ToBase64(buildCsv()),
+              sha: current.sha,
+              branch: CONFIG.branch
+            })
+          });
+
+          if (!updateResponse.ok) {
+            const body = await updateResponse.json().catch(() => ({}));
+            throw new Error(body.message || `Erreur ${updateResponse.status}`);
+          }
+
+          const result = await updateResponse.json();
+          setDirty(false);
+          els.tokenInput.value = "";
+          const commitUrl = result.commit?.html_url;
+          showMessage("Fichier enregistré sur GitHub avec succès.", "success");
+          if (commitUrl) window.open(commitUrl, "_blank", "noopener");
+        } catch (error) {
+          showMessage(`Échec de l’enregistrement : ${error.message}`, "error");
+        } finally {
+          document.getElementById("saveButton").disabled = false;
+        }
+      }
+
+      function applySearch() {
+        const query = els.searchInput.value.trim().toLocaleLowerCase("fr");
+        document.querySelectorAll(".editor-card").forEach(card => {
+          const row = findRow(card.dataset.uid);
+          const haystack = [row?.titre, row?.id, row?.tarif, row?.cal_link].join(" ").toLocaleLowerCase("fr");
+          card.classList.toggle("hidden", Boolean(query) && !haystack.includes(query));
+        });
+      }
+
+      els.cards.addEventListener("input", event => {
+        const fieldElement = event.target.closest(".jhd-field");
+        if (!fieldElement) return;
+        const card = fieldElement.closest(".editor-card");
+        const row = findRow(card.dataset.uid);
+        if (!row) return;
+        const field = fieldElement.dataset.field;
+        row[field] = LIST_FIELDS.has(field) ? editorToList(fieldElement.value) : fieldElement.value;
+        setDirty(true);
+        updateCard(card, row);
+        updateStats();
+        validate(false);
+      });
+
+      els.cards.addEventListener("click", event => {
+        const button = event.target.closest("[data-action]");
+        if (!button) return;
+        event.preventDefault();
+        const card = button.closest(".editor-card");
+        const row = findRow(card.dataset.uid);
+        if (!row) return;
+
+        if (button.dataset.action === "duplicate") duplicateRow(row, true);
+        if (button.dataset.action === "copy") duplicateRow(row, false);
+        if (button.dataset.action === "delete") {
+          if (!confirm(`Supprimer la ligne « ${row.titre || row.id} » ?`)) return;
+          rows = rows.filter(item => item._uid !== row._uid);
+          setDirty(true);
+          render();
+        }
+      });
+
+      document.getElementById("reloadButton").addEventListener("click", () => loadData(true));
+      document.getElementById("addButton").addEventListener("click", () => {
+        const row = newRow();
+        rows.push(row);
+        setDirty(true);
+        render();
+        requestAnimationFrame(() => document.querySelector(`[data-uid="${row._uid}"]`)?.scrollIntoView({ behavior: "smooth", block: "start" }));
+      });
+      document.getElementById("validateButton").addEventListener("click", () => validate(true));
+      document.getElementById("downloadButton").addEventListener("click", downloadCsv);
+      document.getElementById("saveButton").addEventListener("click", saveToGithub);
+      els.searchInput.addEventListener("input", applySearch);
+
+      window.addEventListener("beforeunload", event => {
+        if (!dirty) return;
+        event.preventDefault();
+        event.returnValue = "";
+      });
+
+      loadData();
+    })();
+  </script>
+</body>
+</html>
